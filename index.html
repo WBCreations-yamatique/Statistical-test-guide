@@ -66,9 +66,14 @@
         </div>
 
         <div id="result-display" class="hidden w-full text-center py-4">
-            <p class="text-xl font-bold text-green-600 mb-3">TEST RECOMMENDED:</p>
-            <p id="test-name" class="text-3xl md:text-4xl font-extrabold text-white bg-red-600 p-4 rounded-xl shadow-lg transform scale-105 transition duration-300"></p>
-        </div>
+    <p class="text-xl font-bold text-green-600 mb-3">TEST RECOMMENDED:</p>
+    <p id="test-name" class="text-3xl md:text-4xl font-extrabold text-white bg-red-600 p-4 rounded-xl shadow-lg transform scale-105 transition duration-300 mb-4"></p>
+
+    <!-- NEW: Copy Button -->
+    <button onclick="copyTestName()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-150">
+        📋 Copy Test Name
+    </button>
+</div>
     </div>
 
     <div id="options-container" class="space-y-4 pt-4"></div>
