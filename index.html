@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistical Test Selector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+            margin: 0;
+        }
+        #tooltip-box {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-top: 0.5rem;
+            z-index: 20;
+            width: 90%;
+            max-width: 300px;
+        }
+        .flow-button {
+            padding: 0.8rem 1.5rem;
+            font-size: 1.1rem;
+            line-height: 1.5;
+            transition: all 0.2s;
+        }
+        .step-active {
+            font-weight: 700;
+            color: #4f46e5;
+        }
+        .step-complete {
+            color: #10b981;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container" class="w-full max-w-lg bg-white rounded-xl shadow-2xl p-6 md:p-8 space-y-6">
+
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-800 text-center border-b pb-3 mb-4">
+        Statistical Test Selector
+    </h1>
+
+    <div id="step-tracker" class="flex justify-center text-sm font-medium text-gray-400 mb-4"></div>
+
+    <div id="question-area" class="min-h-[150px] flex flex-col justify-center items-center p-4 relative bg-indigo-50 rounded-lg border border-indigo-200">
+        
+        <div class="flex items-start justify-center w-full min-h-[70px] pt-2">
+            <p id="current-question" class="text-xl md:text-2xl font-semibold text-gray-700 text-center mb-6 pr-10">Loading...</p>
+            <button id="info-button" onclick="toggleTooltip()" class="text-gray-500 hover:text-indigo-600 transition duration-150 focus:outline-none absolute top-4 right-4" aria-label="Show definition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </button>
+        </div>
+
+        <div id="tooltip-box" class="hidden bg-indigo-100 border border-indigo-300 text-sm p-3 rounded-lg shadow-xl text-left">
+            <p id="tooltip-text" class="text-gray-700 font-medium"></p>
+        </div>
+
+        <div id="result-display" class="hidden w-full text-center py-4">
+            <p class="text-xl font-bold text-green-600 mb-3">TEST RECOMMENDED:</p>
+            <p id="test-name" class="text-3xl md:text-4xl font-extrabold text-white bg-red-600 p-4 rounded-xl shadow-lg transform scale-105 transition duration-300"></p>
+        </div>
+    </div>
+
+    <div id="options-container" class="space-y-4 pt-4"></div>
+
+    <div class="flex justify-between pt-4 border-t mt-6">
+        <button id="reset-button" onclick="resetFlow()" class="text-base font-medium text-indigo-600 hover:text-indigo-800 transition duration-150">
+            Start Over
+        </button>
+        <button id="back-button" onclick="goBack()" class="flex items-center text-base font-medium text-gray-500 hover:text-gray-700 transition duration-150 hidden">
+             <svg class="w-5 h-5 mr-1 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+            Go Back
+        </button>
+    </div>
+
+    <div class="text-center text-sm text-gray-500 pt-4">
+        Created by Dr Mullah Ateeq ur Rehman
+    </div>
+</div>
+
+<script>
+    const tree = {
+        "Q1_START": {step: 1, question: "1. How many Outcome (Dependent) Variables?", options: [{ label: "One", next: "Q2_ONE_OUTCOME" },{ label: "Two or More", next: "Q2_TWO_OUTCOME" }]},
+        "Q2_ONE_OUTCOME": {step: 2, question: "2. What is the Type of the One Outcome Variable?", options: [{ label: "Continuous", next: "Q3_PREDICTOR_COUNT" },{ label: "Categorical", next: "Q3_ONE_CAT_PRED" }]},
+        "Q2_TWO_OUTCOME": {step: 2, question: "2. What are the Types of the Two or More Outcomes?", options: [{ label: "All Continuous", next: "Q3_MULTI_CONT_PRED_COUNT" },{ label: "Both (Continuous & Categorical)", next: "TEST:Multivariate Mixed Modeling / Factorial MANOVA" }]},
+        "Q3_MULTI_CONT_PRED_COUNT": {step: 3, question: "3. How many Predictor (Independent) Variables?", options: [{ label: "One", next: "Q4_MULTI_CONT_ONE_PRED" },{ label: "Two or More", next: "Q4_MULTI_CONT_TWO_PRED" }]},
+        "Q4_MULTI_CONT_ONE_PRED": {step: 4, question: "4. What is the Type of the Single Predictor Variable?", options: [{ label: "Categorical", next: "Q5_MANOVA_ASSUMPTIONS_1" },{ label: "Continuous", next: "TEST:Canonical Correlation" }]},
+        "Q4_MULTI_CONT_TWO_PRED": {step: 4, question: "4. What are the types of the Predictor Variables?", options: [{ label: "All Categorical", next: "Q5_MANOVA_ASSUMPTIONS_2" },{ label: "All Continuous", next: "TEST:Canonical Correlation" },{ label: "Both (Mixed Types)", next: "Q5_MANOVA_ASSUMPTIONS_3" }]},
+        "Q5_MANOVA_ASSUMPTIONS_1": {step: 5, question: "5. Do the data meet Parametric Assumptions (e.g., Multivariate Normality, Homogeneity of Covariance)?", options: [{ label: "Yes", next: "TEST:MANOVA" },{ label: "No", next: "TEST:Non-Parametric Multivariate Analysis" }]},
+        "Q5_MANOVA_ASSUMPTIONS_2": {step: 5, question: "5. Do the data meet Parametric Assumptions (e.g., Multivariate Normality, Homogeneity of Covariance)?", options: [{ label: "Yes", next: "TEST:Factorial MANOVA" },{ label: "No", next: "TEST:Non-Parametric Factorial Multivariate Analysis" }]},
+        "Q5_MANOVA_ASSUMPTIONS_3": {step: 5, question: "5. Do the data meet Parametric Assumptions (e.g., Homogeneity of Regression Slopes)?", options: [{ label: "Yes", next: "TEST:MANCOVA" },{ label: "No", next: "TEST:Non-Parametric MANCOVA Equivalent" }]},
+        "Q3_PREDICTOR_COUNT": {step: 3, question: "3. How many Predictor (Independent) Variables?", options: [{ label: "One", next: "Q4_PREDICTOR_TYPE_1" },{ label: "Two or More", next: "Q4_PREDICTOR_TYPE_2" }]},
+        "Q4_PREDICTOR_TYPE_1": {step: 4, question: "4. What is the Type of the Single Predictor Variable?", options: [{ label: "Categorical", next: "Q5_CAT_COUNT" },{ label: "Continuous", next: "Q5_ASSUMPTIONS_CORR" }]},
+        "Q5_ASSUMPTIONS_CORR": {step: 5, question: "5. Do the data meet Parametric Assumptions?", options: [{ label: "Yes", next: "TEST:Pearson Correlation or Regression" },{ label: "No", next: "TEST:Spearman Correlation or Kendall's Tau" }]},
+        "Q5_CAT_COUNT": {step: 5, question: "5. How many Categories does the Predictor Variable have?", options: [{ label: "Two Categories", next: "Q6_SAMPLE_RELATION_T" },{ label: "More than Two Categories", next: "Q6_SAMPLE_RELATION_ANOVA" }]},
+        "Q6_SAMPLE_RELATION_T": {step: 6, question: "6. Are the Cases/Data Different (Independent) or Same (Paired)?", options: [{ label: "Different (Independent)", next: "Q7_ASSUMPTIONS_IND_T" },{ label: "Same (Paired/Related)", next: "Q7_ASSUMPTIONS_DEP_T" }]},
+        "Q7_ASSUMPTIONS_IND_T": {step: 7, question: "7. Do the data meet Parametric Assumptions?", options: [{ label: "Yes", next: "TEST:Independent t-Test" },{ label: "No", next: "TEST:Mann-Whitney U Test" }]},
+        "Q7_ASSUMPTIONS_DEP_T": {step: 7, question: "7. Do the data meet Parametric Assumptions?", options: [{ label: "Yes", next: "TEST:Dependent t-Test" },{ label: "No", next: "TEST:Wilcoxon Matched-Pair Test" }]},
+        "Q6_SAMPLE_RELATION_ANOVA": {step: 6, question: "6. Are the Cases/Data Different (Independent) or Same (Repeated)?", options: [{ label: "Different (Independent)", next: "Q7_ASSUMPTIONS_IND_ANOVA" },{ label: "Same (Repeated/Related)", next: "Q7_ASSUMPTIONS_REP_ANOVA" }]},
+        "Q7_ASSUMPTIONS_IND_ANOVA": {step: 7, question: "7. Do the data meet Parametric Assumptions?", options: [{ label: "Yes", next: "TEST:One Way Independent ANOVA" },{ label: "No", next: "TEST:Kruskal-Wallis Test" }]},
+        "Q7_ASSUMPTIONS_REP_ANOVA": {step: 7, question: "7. Do the data meet Parametric Assumptions?", options: [{ label: "Yes", next: "TEST:One Way Repeated Measures ANOVA" },{ label: "No", next: "TEST:Friedman's ANOVA" }]},
+        "Q4_PREDICTOR_TYPE_2": {step: 4, question: "4. What are the types of the Predictor Variables?", options: [{ label: "All Categorical", next: "Q5_FACTORIAL_SAMPLES" },{ label: "All Continuous", next: "TEST:Multiple Regression" },{ label: "Both (Mixed Types)", next: "TEST:Multiple Regression or ANCOVA" }]},
+        "Q5_FACTORIAL_SAMPLES": {step: 5, question: "5. Are the samples Different (Independent) or Same/Mixed (Related)?", options: [{ label: "Different (Independent)", next: "TEST:Factorial Independent ANOVA" },{ label: "Same or Mixed (Related)", next: "TEST:Factorial Repeated or Mixed ANOVA" }]},
+        "Q3_ONE_CAT_PRED": {step: 3, question: "3. How many Predictor Variables?", options: [{ label: "One", next: "Q4_CAT_OUTCOME_PRED_TYPE" },{ label: "Two or More", next: "Q4_CAT_OUTCOME_MULTI_PRED" }]},
+        "Q4_CAT_OUTCOME_PRED_TYPE": {step: 4, question: "4. What is the Predictor Type?", options: [{ label: "Categorical", next: "TEST:Pearson Chi-Square, Likelihood Ratio, or Fisher's Exact Test (for low cell counts)" },{ label: "Continuous", next: "TEST:Logistic Regression or Biserial Correlation" }]},
+        "Q4_CAT_OUTCOME_MULTI_PRED": {step: 4, question: "4. What are the types of the Predictor Variables?", options: [{ label: "All Categorical", next: "Q5_LOG_ASSUMPTIONS_CAT" },{ label: "All Continuous", next: "TEST:Logistic Regression" },{ label: "Both (Mixed Types)", next: "Q5_LOG_ASSUMPTIONS_MIXED" }]},
+        "Q5_LOG_ASSUMPTIONS_CAT": {step: 5, question: "5. Are the Cases/Data Different (Independent) or Same (Paired)?", options: [{ label: "Different (Independent)", next: "TEST:Loglinear Analysis" },{ label: "Same (Paired/Related)", next: "TEST:Cochran's Q Test or McNemar's Test" }]},
+        "Q5_LOG_ASSUMPTIONS_MIXED": {step: 5, question: "5. Are the Cases/Data Different (Independent) or Same (Paired)?", options: [{ label: "Different (Independent)", next: "TEST:Logistic Regression" },{ label: "Same (Paired/Related)", next: "TEST:Generalized Estimating Equations (GEE)" }]}
+    };
+
+    const tooltipDefinitions = {
+        "Q1_START": "The <b>Outcome Variable</b> (Dependent Variable) is the score or result you are measuring to see if it changes. It is the variable being *explained* or *predicted*.",
+        "Q2_ONE_OUTCOME": "A <b>Continuous</b> variable is a number you <b>measure</b> (decimals are possible). [Example: <b>Height (175.5 cm)</b>, <b>Time (2.5 seconds)</b>]. A <b>Categorical</b> variable is a name or group you <b>classify</b>. [Example: <b>Gender (Male/Female)</b>, <b>Treatment Group (A/B)</b>, <b>Pass/Fail</b>]",
+        "Q3_PREDICTOR_COUNT": "The <b>Predictor Variable</b> (Independent Variable) is the factor you think <b>causes</b> or <b>explains</b> the change in the Outcome. [Example: <b>Study Hours</b> (predicts GPA), <b>Type of Therapy</b> (explains Depression Score)]",
+        "Q3_MULTI_CONT_PRED_COUNT": "This is for when you are analyzing <b>Two or More Outcomes</b> at once (Multivariate Analysis). [Example Outcomes: <b>Math Score AND Reading Score</b>]",
+        "Q4_MULTI_CONT_ONE_PRED": "If your predictor is a <b>group</b> (Categorical), you are comparing means (MANOVA). If it's a <b>score</b> (Continuous), you look for associations (Canonical Correlation).",
+        "Q4_MULTI_CONT_TWO_PRED": "When you have 2+ Predictors, you check if they are all <b>groups</b> (Categorical), all <b>scores</b> (Continuous), or a mix.",
+        "Q5_MANOVA_ASSUMPTIONS_1": "<b>Assumptions</b> are conditions your data must meet to use the most powerful tests. If your data is messy (badly skewed or uneven spread), choose 'No' to use a safer test.",
+        "Q5_MANOVA_ASSUMPTIONS_2": "<b>Assumptions</b> are conditions your data must meet to use the most powerful tests. If your data is messy (badly skewed or uneven spread), choose 'No' to use a safer test.",
+        "Q5_MANOVA_ASSUMPTIONS_3": "<b>Assumptions</b> are conditions your data must meet to use the most powerful tests. If your data is messy (badly skewed or uneven spread), choose 'No' to use a safer test.",
+        "Q5_ASSUMPTIONS_CORR": "<b>Assumptions</b> for correlation/regression usually mean the relationship is straight (linear) and the errors are normally spread out. If your data looks messy, choose 'No'.",
+        "Q6_SAMPLE_RELATION_T": "<b>Different (Independent)</b> means the people in the groups are separate. [Example: <b>Comparing a group of Men vs. a group of Women</b>]. <b>Same (Paired/Related)</b> means the same individuals are measured multiple times. [Example: <b>Measuring a patient Before and After treatment</b>]",
+        "Q7_ASSUMPTIONS_IND_T": "<b>Assumptions</b> for t-tests check if your data is normally spread out and if the groups have similar variance (spread). If your data is uneven, choose 'No'.",
+        "Q7_ASSUMPTIONS_DEP_T": "<b>Assumptions</b> for paired tests check if the *difference scores* (e.g., Post-test score minus Pre-test score) are normally spread out.",
+        "Q7_ASSUMPTIONS_IND_ANOVA": "<b>Assumptions</b> for ANOVA check if the data is normally spread out and if all groups have similar variance. If uneven, choose 'No'.",
+        "Q7_ASSUMPTIONS_REP_ANOVA": "<b>Assumptions</b> for Repeated Measures ANOVA check for Normality and Sphericity (a condition about the relationships between repeated measures). If uneven, choose 'No'.",
+        "Q3_ONE_CAT_PRED": "This path is for when your <b>Outcome</b> is a <b>Category</b> (e.g., predicting Pass/Fail). The test looks for associations or probability.",
+        "Q4_CAT_OUTCOME_MULTI_PRED": "When predicting a categorical outcome with multiple predictors, <b>Logistic Regression</b> is the main tool, unless all your predictors are also categories (Loglinear Analysis).",
+        "Q5_LOG_ASSUMPTIONS_CAT": "This checks if your data points are related (like repeated choices) or separate (independent groups) for categorical outcomes.",
+        "Q5_LOG_ASSUMPTIONS_MIXED": "This checks if your data points are related (like repeated observations) or separate (independent groups) for categorical outcomes with mixed predictors."
+    };
+
+    let currentStep = "Q1_START";
+    let history = [];
+    const MAX_STEPS = 7;
+
+    const questionEl = document.getElementById('current-question');
+    const optionsContainer = document.getElementById('options-container');
+    const resultDisplay = document.getElementById('result-display');
+    const testNameEl = document.getElementById('test-name');
+    const backButton = document.getElementById('back-button');
+    const appContainer = document.getElementById('app-container');
+    const infoButton = document.getElementById('info-button');
+    const tooltipBox = document.getElementById('tooltip-box');
+    const tooltipTextEl = document.getElementById('tooltip-text');
+    const stepTrackerEl = document.getElementById('step-tracker');
+
+    window.toggleTooltip = function() {
+        tooltipBox.classList.toggle('hidden');
+    }
+    
+    function updateTooltipContent(stepId) {
+        const definition = tooltipDefinitions[stepId];
+        if (definition) {
+            tooltipTextEl.innerHTML = definition; 
+            infoButton.classList.remove('hidden');
+        } else {
+            infoButton.classList.add('hidden');
+        }
+        tooltipBox.classList.add('hidden');
+    }
+
+    function renderStepTracker(currentStepNumber) {
+        stepTrackerEl.innerHTML = '';
+        for (let i = 1; i <= MAX_STEPS; i++) {
+            const span = document.createElement('span');
+            span.textContent = i;
+            span.className = 'mx-1 px-2 py-1 rounded-full text-xs transition duration-200';
+
+            if (i < currentStepNumber) {
+                span.classList.add('step-complete', 'bg-green-100');
+            } else if (i === currentStepNumber) {
+                span.classList.add('step-active', 'bg-indigo-200');
+            } else {
+                span.classList.add('bg-gray-100');
+            }
+            stepTrackerEl.appendChild(span);
+        }
+    }
+
+    function renderStep() {
+        const step = tree[currentStep];
+
+        optionsContainer.innerHTML = '';
+        resultDisplay.classList.add('hidden');
+        questionEl.classList.remove('hidden');
+        appContainer.classList.remove('bg-red-50', 'shadow-red-300');
+        backButton.classList.toggle('hidden', history.length === 0);
+
+        updateTooltipContent(currentStep);
+
+        if (currentStep.startsWith('TEST:')) {
+            const test = currentStep.substring(5);
+            questionEl.classList.add('hidden');
+            infoButton.classList.add('hidden');
+            resultDisplay.classList.remove('hidden');
+            testNameEl.textContent = test;
+            appContainer.classList.add('bg-red-50', 'shadow-red-300');
+            stepTrackerEl.innerHTML = '<span class="text-xl text-red-600 font-bold">Done!</span>';
+
+            const resetButton = document.createElement('button');
+            resetButton.textContent = "Start a New Selection";
+            resetButton.className = "w-full flow-button bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition duration-150 shadow-md mt-4";
+            resetButton.onclick = resetFlow;
+            optionsContainer.appendChild(resetButton);
+
+            return;
+        }
+
+        renderStepTracker(step.step);
+        questionEl.textContent = step.question;
+
+        step.options.forEach(option => {
+            const button = document.createElement('button');
+            button.textContent = option.label;
+            button.className = "w-full flow-button bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition duration-150 shadow-md";
+            button.onclick = () => handleSelection(option.next, option.label);
+            optionsContainer.appendChild(button);
+        });
+    }
+
+    function handleSelection(nextStepId, selectionLabel) {
+        history.push({ prev: currentStep, choice: selectionLabel });
+        currentStep = nextStepId;
+        renderStep();
+    }
+
+    window.goBack = function() {
+        if (history.length > 0) {
+            const lastStep = history.pop();
+            currentStep = lastStep.prev;
+            renderStep();
+        }
+    }
+
+    window.resetFlow = function() {
+        currentStep = "Q1_START";
+        history = [];
+        renderStep();
+    }
+
+    document.addEventListener('DOMContentLoaded', renderStep);
+</script>
+
+</body>
+</html>
